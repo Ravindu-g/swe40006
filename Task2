@@ -1,0 +1,31 @@
+sudo dnf -y update
+sudo dnf -y install httpd mariadb105-server php8.1 php8.1-mysqlnd
+
+sudo systemctl enable --now httpd
+sudo systemctl enable --now mariadb
+
+sudo usermod -a -G apache ec2-user
+sudo chown -R ec2-user:apache /var/www
+sudo chmod 2775 /var/www
+find /var/www -type d -exec sudo chmod 2775 {} \;
+find /var/www -type f -exec sudo chmod 0664 {} \;
+
+sudo mysql -e "CREATE DATABASE wordpress DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
+sudo mysql -e "CREATE USER 'wpuser'@'localhost' IDENTIFIED BY 'Dotta@123456';"
+sudo mysql -e "GRANT ALL PRIVILEGES ON wordpress.* TO 'wpuser'@'localhost'; FLUSH PRIVILEGES;"
+
+cd /tmp
+curl -O https://wordpress.org/latest.tar.gz
+tar -xzf latest.tar.gz
+sudo rsync -avP wordpress/ /var/www/html/
+sudo cp /var/www/html/wp-config-sample.php /var/www/html/wp-config.php
+
+sudo sed -i "s/database_name_here/wordpress/" /var/www/html/wp-config.php
+sudo sed -i "s/username_here/wpuser/" /var/www/html/wp-config.php
+sudo sed -i "s/password_here/Dotta@123456/" /var/www/html/wp-config.php
+
+sudo chown -R ec2-user:apache /var/www/html
+sudo find /var/www/html -type d -exec chmod 2775 {} \;
+sudo find /var/www/html -type f -exec chmod 0664 {} \;
+
+sudo systemctl restart httpd
